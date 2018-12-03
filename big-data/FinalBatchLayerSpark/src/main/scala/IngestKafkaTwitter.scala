@@ -5,6 +5,7 @@ import org.apache.spark._
 import org.apache.spark.SparkConf
 import org.apache.spark.SparkContext._
 import org.apache.spark.sql._
+import org.apache.spark.sql.functions.{col, to_date}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.hive._
 import org.apache.spark.sql.hive.HiveContext
@@ -42,9 +43,12 @@ object IngestKafkaTwitter {
     "enable.auto.commit" -> (false: java.lang.Boolean)
   );
 
-  def run(): Unit = {
-
-    println("Starting twitter data ingestion from Kafka to Hive.");
+  /**
+   * Gets Batch layer data from Kafka and writes to a temporary
+   * table (for persistence) and then writes the data into Hive
+   * ORC.
+   */
+  def streamFromKafkaToHive(): Unit = {
 
     val stream = KafkaUtils.createDirectStream[String, String](
       streamingContext, 
@@ -60,13 +64,13 @@ object IngestKafkaTwitter {
 
     val serializedRows = serializedRecords.map(
       x => Row(
-        x.created_at,       // col0
-        x.created_at_day,   // col1
-        x.id_str,           // col2
-        x.text,             // col3
-        x.retweeted_count,  // col4
-        x.favorite_count,   // col5
-        x.user_id           // col6
+        x.created_at,                            // col0
+        x.created_at_day,                        // col1
+        x.id_str,                                // col2
+        x.text,                                  // col3
+        x.retweeted_count,                       // col4
+        x.favorite_count,                        // col5
+        x.user_id                                // col6
       )
     );
 
@@ -75,8 +79,8 @@ object IngestKafkaTwitter {
       StructField("col1", StringType, true),
       StructField("col2", StringType, true),
       StructField("col3", StringType, true),
-      StructField("col4", StringType, true),
-      StructField("col5", StringType, true),
+      StructField("col4", LongType, true),
+      StructField("col5", LongType, true),
       StructField("col6", StringType, true)
     );
 
@@ -84,11 +88,23 @@ object IngestKafkaTwitter {
       val df = hiveContext.createDataFrame(
         rdd,
         StructType(schema)
+      ).withColumn( // patches the str field to date field
+        "col1",
+        to_date(col("col1"), "yyyy-MM-dd")
       );
       df.registerTempTable("huarngpa_tmp_master_twitter")
+      df.write
+        .mode(SaveMode.Append)
+        .format("hive")
+        .saveAsTable("huarngpa_master_twitter");
     });
     
+  }
+  
+  def main(args:Array[String]) {
+    streamFromKafkaToHive();
     streamingContext.start();
     streamingContext.awaitTermination();
+
   }
 }

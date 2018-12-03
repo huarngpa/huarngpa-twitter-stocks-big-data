@@ -5,16 +5,14 @@
 ##########################################################################
 
 CURRENT_DIR=${PWD%}
-PROJECT_ROOT=${PWD%/*}
-WEB_ROOT="${PROJECT_ROOT}/web/backend-queue-new-data"
+WEB_ROOT=$CURRENT_DIR
 
 ##########################################################################
 # SCRIPT
 ##########################################################################
 
-echo "Testing Twitter Big Data System"
+echo "Testing Web Backend for Big Data System"
 echo "$CURRENT_DIR"
-echo "$PROJECT_ROOT"
 echo "$WEB_ROOT"
 
 ## Remove SQLite database if it was last used (or in use)
@@ -28,5 +26,5 @@ cd $WEB_ROOT
 python3 "${WEB_ROOT}/manage.py" db upgrade
 echo "Initialized the web database for testing."
 
-## Go back to the original directory
-cd $CURRENT_DIR
+## Start the server, blocks current bash session
+python3 "${WEB_ROOT}/manage.py" runserver
