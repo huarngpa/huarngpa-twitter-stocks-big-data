@@ -13,6 +13,7 @@ This is the big data package of the final project. For this part of the stack, I
     * Hive
     * ORC
     * Spark
+    * Stanford CoreNLP
 * Serving layer
 * Speed layer
 

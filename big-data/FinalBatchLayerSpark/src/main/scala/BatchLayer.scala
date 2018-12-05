@@ -5,7 +5,7 @@ import org.apache.spark._
 import org.apache.spark.SparkConf
 import org.apache.spark.SparkContext._
 import org.apache.spark.sql._
-import org.apache.spark.sql.functions.{col, to_date}
+import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.hive._
 import org.apache.spark.sql.hive.HiveContext
@@ -29,17 +29,26 @@ object BatchLayer {
   
   val sparkConf = new SparkConf().setAppName("SparkBatchLayer");
   val streamingContext = new StreamingContext(sparkConf, Seconds(30));
-  streamingContext.checkpoint("/tmp/huarngpa/batch/twitter")
+  streamingContext.checkpoint("/tmp/huarngpa/batch/");
+  val sqlContext = new SQLContext(streamingContext.sparkContext);
+  import sqlContext.implicits._
   val hiveContext = new HiveContext(streamingContext.sparkContext);
 
-  val kafkaParams = Map[String, Object](
-    "bootstrap.servers" -> "localhost:9092",
-    "key.deserializer" -> classOf[StringDeserializer],
-    "value.deserializer" -> classOf[StringDeserializer],
-    "group.id" -> "use_a_separate_group_id_for_each_stream",
-    "auto.offset.reset" -> "latest",
-    "enable.auto.commit" -> (false: java.lang.Boolean)
-  );
+  var kafkaParams = Map[String, Object]();
+
+  /**
+   * Bootstraps the kafka params for the batch layer.
+   */
+  def bootstrapKafkaParams(server: String): Unit = {
+    kafkaParams = Map[String, Object](
+      "bootstrap.servers" -> server,
+      "key.deserializer" -> classOf[StringDeserializer],
+      "value.deserializer" -> classOf[StringDeserializer],
+      "group.id" -> "use_a_separate_group_id_for_each_stream",
+      "auto.offset.reset" -> "latest",
+      "enable.auto.commit" -> (false: java.lang.Boolean)
+    );
+  }
 
   /**
    * Creates the batch layer data by reading from a Kafka queue
@@ -132,16 +141,6 @@ object BatchLayer {
       )
     );
 
-    //case class StockRecord(
-    //  ticker: String,
-    //  date: String, 
-    //  day_open: Double, 
-    //  day_high: Double, 
-    //  day_low: Double, 
-    //  day_close: Double, 
-    //  day_volume: Long
-    //)
-
     val schema = List(
       StructField("col0", StringType, true),
       StructField("col1", StringType, true),
@@ -166,12 +165,40 @@ object BatchLayer {
         .format("hive")
         .saveAsTable("huarngpa_master_stock");
     });
-    
+
+  }
+
+  /*
+   * Aggregates some of the simpler batch views into a separate method.
+   */
+  def batchViewSimple() = {
+    var spark = SparkSession
+      .builder()
+      .appName("Simple Batch Views")
+      .enableHiveSupport()
+      .getOrCreate()
+
+    val tweets = spark.table("huarngpa_master_twitter");
+    val stocks = spark.table("huarngpa_master_stock");
+
+    val maxBatchTweetDate = tweets.groupBy(tweets("col6"))
+      .agg(max(tweets("col1")))
+      .write.mode(SaveMode.Overwrite)
+      .saveAsTable("huarngpa_view_max_twitter_date");
   }
   
-  def main(args:Array[String]) {
+  def main(args: Array[String]) = {
+    if (args.length < 1) {
+      System.err.println(s"""
+        |Usage: spark-submit ... <host:port>
+        |  <host:port> for the leader machine to coordinate the batch jobs.
+        """.stripMargin);
+      System.exit(1);
+    }
+    bootstrapKafkaParams(args(0));
     batchLayerIngestKafkaTwitter();
     batchLayerIngestKafkaStock();
+    batchViewSimple();
     streamingContext.start();
     streamingContext.awaitTermination();
 
