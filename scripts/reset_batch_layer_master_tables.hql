@@ -9,3 +9,14 @@ create table huarngpa_master_twitter(
   col5 bigint,
   col6 string
 ) stored as orc;
+
+drop table if exists huarngpa_master_stock;
+create table huarngpa_master_stock(
+  col0 string,
+  col1 date,
+  col2 double,
+  col3 double,
+  col4 double,
+  col5 double,
+  col6 bigint
+) stored as orc;
