@@ -20,10 +20,9 @@ import edu.uchicago.huarngpa.TwitterRecord
 
 
 /**
- * Gets Twitter data from a Kafka topic and writes the data
- * into Hive.
+ * Batch layer ingest and view creation.
  */
-object IngestKafkaTwitter {
+object BatchLayer {
   
   val mapper = new ObjectMapper();
   mapper.registerModule(DefaultScalaModule);
@@ -33,7 +32,6 @@ object IngestKafkaTwitter {
   streamingContext.checkpoint("/tmp/huarngpa/batch/twitter")
   val hiveContext = new HiveContext(streamingContext.sparkContext);
 
-  val topics = Array("huarngpa_ingest_batch_twitter")
   val kafkaParams = Map[String, Object](
     "bootstrap.servers" -> "localhost:9092",
     "key.deserializer" -> classOf[StringDeserializer],
@@ -44,16 +42,18 @@ object IngestKafkaTwitter {
   );
 
   /**
-   * Gets Batch layer data from Kafka and writes to a temporary
-   * table (for persistence) and then writes the data into Hive
-   * ORC.
+   * Creates the batch layer data by reading from a Kafka queue
+   * writing data to a temporary table and then appending to a 
+   * Hive ORC table.
    */
-  def streamFromKafkaToHive(): Unit = {
+  def batchLayerIngestKafkaTwitter(): Unit = {
 
     val stream = KafkaUtils.createDirectStream[String, String](
       streamingContext, 
       PreferConsistent,
-      Subscribe[String, String](topics, kafkaParams)
+      Subscribe[String, String](
+        Array("huarngpa_ingest_batch_twitter"), 
+        kafkaParams)
     );
 
     val records = stream.map(_.value);
@@ -102,7 +102,7 @@ object IngestKafkaTwitter {
   }
   
   def main(args:Array[String]) {
-    streamFromKafkaToHive();
+    batchLayerIngestKafkaTwitter();
     streamingContext.start();
     streamingContext.awaitTermination();
 
