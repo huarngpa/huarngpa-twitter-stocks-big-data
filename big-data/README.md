@@ -17,7 +17,7 @@ This is the big data package of the final project. For this part of the stack, I
 * Speed layer
 
 # Backend Layer Installation & Deployment
-
+If this is a first time deployment on your cluster, please run the hql contained in the `scripts/create_batch_layer_master_tables.hql`. This builds the tables we for the master dataset.
 
 # Serving Layer Installation & Deployment
 # Speed Layer Installation & Deployment
