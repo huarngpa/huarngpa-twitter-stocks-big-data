@@ -34,7 +34,7 @@ spark-submit --master local[2] --class edu.uchicago.huarngpa.BatchIngest uber-Fi
 # Backend Layer Installation & Deployment
 ```
 # For local machine:
-spark-submit --master local[2] --css edu.uchicago.huarngpa.BatchViews uber-FinalSparkBatchViews-0.0.1-SNAPSHOT.jar localhost:9092
+spark-submit --master local[2] --class edu.uchicago.huarngpa.BatchViews uber-FinalSparkBatchViews-0.0.1-SNAPSHOT.jar localhost:9092
 
 # For cluster:
 ```
