@@ -2,9 +2,8 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>edu.uchicago.huarngpa</groupId>
-  <artifactId>FinalBatchLayerSpark</artifactId>
   <version>0.0.1-SNAPSHOT</version>
-  <name>FinalBatchLayerSpark</name>
+  <name>FinalSparkBatchViews</name>
   <build>
     <sourceDirectory>src/main/scala</sourceDirectory>
     <testSourceDirectory>src/test/scala</testSourceDirectory>
@@ -54,7 +53,7 @@
 	  <descriptorRefs>
 	    <descriptorRef>jar-with-dependencies</descriptorRef>
 	  </descriptorRefs>
-	  <finalName>uber-FinalBatchLayerSpark-0.0.1-SNAPSHOT</finalName>
+	  <finalName>uber-FinalSparkBatchViews-0.0.1-SNAPSHOT</finalName>
 	  <appendAssemblyId>false</appendAssemblyId>
 	</configuration>
 	<executions>
@@ -163,4 +162,5 @@
     	<version>3.9.2</version>
     </dependency>
   </dependencies>
+  <artifactId>FinalSparkBatchViews</artifactId>
 </project>

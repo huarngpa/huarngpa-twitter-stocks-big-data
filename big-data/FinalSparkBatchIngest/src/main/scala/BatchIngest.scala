@@ -22,17 +22,20 @@ import edu.uchicago.huarngpa.{StockRecord, TwitterRecord}
 /**
  * Batch layer ingest and view creation.
  */
-object BatchLayer {
+object BatchIngest {
   
   val mapper = new ObjectMapper();
   mapper.registerModule(DefaultScalaModule);
   
-  val sparkConf = new SparkConf().setAppName("SparkBatchLayer");
-  val streamingContext = new StreamingContext(sparkConf, Seconds(30));
+  val spark = SparkSession.builder()
+                          .appName("SparkBatchLayer")
+                          .enableHiveSupport()
+                          .getOrCreate()
+  val streamingContext = new StreamingContext(spark.sparkContext, 
+                                              Seconds(30));
   streamingContext.checkpoint("/tmp/huarngpa/batch/");
   val sqlContext = new SQLContext(streamingContext.sparkContext);
   import sqlContext.implicits._
-  val hiveContext = new HiveContext(streamingContext.sparkContext);
 
   var kafkaParams = Map[String, Object]();
 
@@ -94,7 +97,7 @@ object BatchLayer {
     );
 
     serializedRows.foreachRDD(rdd => {
-      val df = hiveContext.createDataFrame(
+      val df = sqlContext.createDataFrame(
         rdd,
         StructType(schema)
       ).withColumn( // patches the str field to date field
@@ -152,7 +155,7 @@ object BatchLayer {
     );
 
     serializedRows.foreachRDD(rdd => {
-      val df = hiveContext.createDataFrame(
+      val df = sqlContext.createDataFrame(
         rdd,
         StructType(schema)
       ).withColumn( // patches the str field to date field
@@ -169,25 +172,12 @@ object BatchLayer {
   }
 
   /*
-   * Aggregates some of the simpler batch views into a separate method.
+   * Main entry point for the batch layer program. 
+   * Takes a <host:port> param for the kafka machine and initializes
+   * a streaming session to ingest batch layer data from the queues.
    */
-  def batchViewSimple() = {
-    var spark = SparkSession
-      .builder()
-      .appName("Simple Batch Views")
-      .enableHiveSupport()
-      .getOrCreate()
-
-    val tweets = spark.table("huarngpa_master_twitter");
-    val stocks = spark.table("huarngpa_master_stock");
-
-    val maxBatchTweetDate = tweets.groupBy(tweets("col6"))
-      .agg(max(tweets("col1")))
-      .write.mode(SaveMode.Overwrite)
-      .saveAsTable("huarngpa_view_max_twitter_date");
-  }
-  
   def main(args: Array[String]) = {
+
     if (args.length < 1) {
       System.err.println(s"""
         |Usage: spark-submit ... <host:port>
@@ -195,10 +185,14 @@ object BatchLayer {
         """.stripMargin);
       System.exit(1);
     }
+
     bootstrapKafkaParams(args(0));
+
+    // master and batch views 
     batchLayerIngestKafkaTwitter();
     batchLayerIngestKafkaStock();
-    batchViewSimple();
+
+    // stream and run
     streamingContext.start();
     streamingContext.awaitTermination();
 
