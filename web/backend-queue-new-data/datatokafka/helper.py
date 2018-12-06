@@ -1,7 +1,9 @@
 ''' Helper classes or functions for the application. '''
 
 from multiprocessing import Process
+import os
 from threading import Thread
+import tweepy
 from datatokafka.models import (db,
                                 StockHistory, 
                                 TwitterUser,)
@@ -37,8 +39,21 @@ def write_stock_history_request(ticker):
     db.session.commit()
 
 
+def bootstrap_tweepy():
+    api_key = os.environ.get('TWITTER_API_KEY')
+    api_secret = os.environ.get('TWITTER_API_SECRET_KEY')
+    token = os.environ.get('TWITTER_API_ACCESS_TOKEN')
+    token_secret = os.environ.get('TWITTER_API_ACCESS_TOKEN_SECRET')
+    auth = tweepy.OAuthHandler(api_key, api_secret)
+    auth.set_access_token(token, token_secret)
+    return tweepy.API(auth)
+
+
 def write_twitter_user_request(username):
+    api = bootstrap_tweepy()
+    user = api.get_user(screen_name=username)
     t = TwitterUser()
     t.username = username
+    t.user_id = user.id
     db.session.add(t)
     db.session.commit()

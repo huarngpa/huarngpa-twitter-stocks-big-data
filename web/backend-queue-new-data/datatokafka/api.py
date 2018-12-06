@@ -47,3 +47,15 @@ def twitter_api(user):
         return jsonify(data), 201
     data['message'] = 'Bad request from the user.'
     return jsonify(data), 400
+
+
+@api.route('/stock/requests', methods=('GET',))
+def stock_api_requests():
+    requests = [s.to_dict() for s in StockHistory.query.all()]
+    return jsonify(requests)
+
+
+@api.route('/twitter/requests', methods=('GET',))
+def twitter_api_requests():
+    requests = [u.to_dict() for u in TwitterUser.query.all()]
+    return jsonify(requests)

@@ -28,24 +28,17 @@ object BatchViews {
     print("Starting twitter normalization batch view... ")
     val twitterNormalized = spark.sql(s"""
       |select 
-      |  A.col1 as tweet_date,
-      |  A.col2 as tweet_id,
-      |  B.col3 as tweet_text,
-      |  max(A.col4) as retweets,
-      |  max(A.col5) as favorited,
-      |  A.col6 as user_id
+      |  col1 as tweet_date,
+      |  col2 as tweet_id,
+      |  max(col4) as retweets,
+      |  max(col5) as favorited,
+      |  col6 as user_id
       |from 
-      |  huarngpa_master_twitter A
-      |left join
-      |  huarngpa_master_twitter B on
-      |    A.col1 = B.col1 and 
-      |    A.col2 = B.col2 and
-      |    A.col6 = B.col6
+      |  huarngpa_master_twitter
       |group by 
-      |  A.col1,
-      |  A.col2,
-      |  B.col3,
-      |  A.col6
+      |  col1,
+      |  col2,
+      |  col6
       """.stripMargin
     );
     twitterNormalized
@@ -58,7 +51,9 @@ object BatchViews {
   }
 
   /*
-   *
+   * Creates basic descriptive statistics around the twitter data
+   * to be used later by the applicaiton layer to coordinate the 
+   * batch and speed layers.
    */
   def batchViewsTwitterAllTime(): Unit = {
     print("Starting twitter all time batch view... ")
@@ -71,7 +66,7 @@ object BatchViews {
       |  sum(retweets) as sum_retweets,
       |  sum(favorited) as sum_favorited
       |from huarngpa_view_twitter_normalized
-      |group by col6
+      |group by user_id
       """.stripMargin
     );
     twitterAllTime
@@ -83,11 +78,37 @@ object BatchViews {
     print("Completed.\n");
   }
   
+  /*
+   * Creates a dataset for sentiment analysis and word count.
+   */
+  def batchViewsTwitterTextSet(): Unit = {
+    print("Starting twitter tweets set... ")
+    val twitterTextSet = spark.sql(s"""
+      |select 
+      |  col2 as tweet_id,
+      |  col3 as text_set
+      |from 
+      |  huarngpa_master_twitter
+      |group by 
+      |  col2,
+      |  col3
+      """.stripMargin
+    );
+    twitterTextSet
+      .registerTempTable("huarngpa_tmp_view_twitter_textset");
+    twitterTextSet.write
+      .mode(SaveMode.Overwrite)
+      .format("hive")
+      .saveAsTable("huarngpa_view_twitter_textset");
+    print("Completed.\n");
+  }
+  
   def main(args: Array[String]) = {
     
     while (true) {
       batchViewsTwitterNormalize()
       batchViewsTwitterAllTime()
+      batchViewsTwitterTextSet()
       Thread.sleep(eightHours)
     }
 

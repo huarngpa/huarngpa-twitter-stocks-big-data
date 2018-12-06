@@ -24,6 +24,17 @@ I made the decision to have the backend web applications write directy to Kafka 
 * Database:
     * AWS RDS (PostgreSQL)
 
+# General Installation & Deployment
+Make sure to define the following variables in a `.env` or `.bashrc` file on the machines you are deploying the web applications to:
+```
+export TWITTER_API_KEY="<key>"
+export TWITTER_API_SECRET_KEY="<secret-key>"
+export TWITTER_API_ACCESS_TOKEN="<token>"
+export TWITTER_API_ACCESS_TOKEN_SECRET="<token-secret>"
+export API_KAFKA_HOST="localhost:9092"
+```
+
+
 # Backend Installation & Deployment
 Make sure that you have python3 and pip3 on your deployment environment. Locate the `requirements.txt` and run `pip3 install -r requirements.txt`. This will download all the python dependencies and libraries needed the execute the application.
 

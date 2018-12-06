@@ -59,7 +59,8 @@ class StockAPI:
         self.count = 0
     
     def _bootstrap_api(self):
-        self.kafka_producer = KafkaProducer(bootstrap_servers='localhost:9092')
+        kafka_host = os.environ.get('API_KAFKA_HOST')
+        self.kafka_producer = KafkaProducer(bootstrap_servers=kafka_host)
     
     def set_kafka_topic(self, topic=None):
         if topic != None:

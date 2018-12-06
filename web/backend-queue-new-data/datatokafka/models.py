@@ -12,6 +12,7 @@ class TwitterUser(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(255), nullable=False)
+    user_id = db.Column(db.String(255), nullable=False)
     requested_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def __repr__(self):
@@ -21,6 +22,7 @@ class TwitterUser(db.Model):
     def to_dict(self):
         return dict(id=self.id,
                     username=self.username,
+                    user_id=self.user_id,
                     requested_at=self.requested_at)
 
     @staticmethod
