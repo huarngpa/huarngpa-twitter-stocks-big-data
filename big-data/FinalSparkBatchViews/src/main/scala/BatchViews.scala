@@ -5,6 +5,7 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.hive._
 import org.apache.spark.sql.hive.HiveContext
+import edu.uchicago.huarngpa.SentimentAnalyzer
 
 
 /**
@@ -79,27 +80,33 @@ object BatchViews {
   }
   
   /*
-   * Creates a dataset for sentiment analysis and word count.
+   * Runs Stanford NLP Sentiment analyses on tweets.
    */
-  def batchViewsTwitterTextSet(): Unit = {
-    print("Starting twitter tweets set... ")
-    val twitterTextSet = spark.sql(s"""
-      |select 
-      |  col2 as tweet_id,
-      |  col3 as text_set
-      |from 
-      |  huarngpa_master_twitter
-      |group by 
-      |  col2,
-      |  col3
-      """.stripMargin
-    );
-    twitterTextSet
-      .registerTempTable("huarngpa_tmp_view_twitter_textset");
-    twitterTextSet.write
-      .mode(SaveMode.Overwrite)
-      .format("hive")
-      .saveAsTable("huarngpa_view_twitter_textset");
+  def batchViewsTwitterSentiment(): Unit = {
+
+    print("Starting twitter sentiment analysis... ")
+    
+    val df = spark.table("huarngpa_master_twitter");
+
+    df.foreach(r => {
+      val tweetId = r.getAs[String]("col2");
+      val tweetText = r.getAs[String]("col3")
+                       .replaceAll("\n", "")
+                       .replaceAll("rt\\s+", "")
+                       .replaceAll("\\s+@\\w+", "")
+                       .replaceAll("@\\w+", "")
+                       .replaceAll("\\s+#\\w+", "")
+                       .replaceAll("#\\w+", "")
+                       .replaceAll("(?:https?|http?)://[\\w/%.-]+", "")
+                       .replaceAll("(?:https?|http?)://[\\w/%.-]+\\s+", "")
+                       .replaceAll("(?:https?|http?)//[\\w/%.-]+\\s+", "")
+                       .replaceAll("(?:https?|http?)//[\\w/%.-]+", "");
+      println(tweetText);
+      println(SentimentAnalyzer.mainSentiment(tweetText));
+      println();
+
+    });
+
     print("Completed.\n");
   }
   
@@ -108,7 +115,7 @@ object BatchViews {
     while (true) {
       batchViewsTwitterNormalize()
       batchViewsTwitterAllTime()
-      batchViewsTwitterTextSet()
+      batchViewsTwitterSentiment()
       Thread.sleep(eightHours)
     }
 

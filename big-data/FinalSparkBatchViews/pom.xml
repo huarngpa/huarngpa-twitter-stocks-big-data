@@ -147,9 +147,15 @@
     	<version>2.3.0</version>
     </dependency>
     <dependency>
-    	<groupId>edu.stanford.nlp</groupId>
-    	<artifactId>stanford-corenlp</artifactId>
-    	<version>3.9.2</version>
+        <groupId>edu.stanford.nlp</groupId>
+        <artifactId>stanford-corenlp</artifactId>
+        <version>3.9.2</version>
+    </dependency>
+    <dependency>
+        <groupId>edu.stanford.nlp</groupId>
+        <artifactId>stanford-corenlp</artifactId>
+        <version>3.9.2</version>
+        <classifier>models</classifier>
     </dependency>
   </dependencies>
   <artifactId>FinalSparkBatchViews</artifactId>
