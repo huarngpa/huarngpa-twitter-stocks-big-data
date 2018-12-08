@@ -6,6 +6,7 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.hive._
 import org.apache.spark.sql.hive.HiveContext
 import edu.uchicago.huarngpa.SentimentAnalyzer
+import edu.uchicago.huarngpa.Sentiment.Sentiment
 
 
 /**
@@ -70,12 +71,14 @@ object BatchViews {
       |group by user_id
       """.stripMargin
     );
+
     twitterAllTime
       .registerTempTable("huarngpa_tmp_view_twitter_alltime");
     twitterAllTime.write
       .mode(SaveMode.Overwrite)
       .format("hive")
       .saveAsTable("huarngpa_view_twitter_alltime");
+
     print("Completed.\n");
   }
   
@@ -88,7 +91,16 @@ object BatchViews {
     
     val df = spark.table("huarngpa_master_twitter");
 
-    df.foreach(r => {
+    def matchEnum(x: Sentiment): Double = x match {
+      case Sentiment.VNEGATIVE => -1.0
+      case Sentiment.NEGATIVE => -0.5
+      case Sentiment.POSITIVE => 0.5
+      case Sentiment.VPOSITIVE => 1.0
+      case _ => 0.0
+    }
+    
+    import spark.sqlContext.implicits._
+    val df2 = df.map(r => {
       val tweetId = r.getAs[String]("col2");
       val tweetText = r.getAs[String]("col3")
                        .replaceAll("\n", "")
@@ -101,18 +113,42 @@ object BatchViews {
                        .replaceAll("(?:https?|http?)://[\\w/%.-]+\\s+", "")
                        .replaceAll("(?:https?|http?)//[\\w/%.-]+\\s+", "")
                        .replaceAll("(?:https?|http?)//[\\w/%.-]+", "");
-      println(tweetText);
-      println(SentimentAnalyzer.mainSentiment(tweetText));
-      println();
-
+      try {
+        val sentiment = matchEnum(SentimentAnalyzer.mainSentiment(tweetText));
+        (tweetId, sentiment)
+      } catch {
+        case _: Throwable => (tweetId, 0.0)
+      }
     });
+
+    val cols = Seq("tweet_id", "sentiment");
+    val df3 = df2.toDF(cols: _*)
+
+    df3.createOrReplaceTempView("huarngpa_tmp_view_twitter_sentiment");
+    spark.sql(s"""
+      |create 
+      |  table huarngpa_view_twitter_sentiment 
+      |    as select * from huarngpa_tmp_view_twitter_sentiment
+      """.stripMargin
+      );
 
     print("Completed.\n");
   }
   
+  /*
+   * Describe
+   */
+  def batchViewsStockNormalized(): Unit = {}
+  
+  /*
+   * Describe
+   */
+  def batchViewsStockWeekly(): Unit = {}
+  
   def main(args: Array[String]) = {
     
     while (true) {
+      // run the batch layer pipeline
       batchViewsTwitterNormalize()
       batchViewsTwitterAllTime()
       batchViewsTwitterSentiment()

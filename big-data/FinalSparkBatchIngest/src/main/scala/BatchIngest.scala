@@ -110,7 +110,6 @@ object BatchIngest {
         .format("hive")
         .saveAsTable("huarngpa_master_twitter");
     });
-    
   }
   
   /**
@@ -168,7 +167,6 @@ object BatchIngest {
         .format("hive")
         .saveAsTable("huarngpa_master_stock");
     });
-
   }
 
   /*
