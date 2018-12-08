@@ -1,4 +1,9 @@
 package edu.uchicago.huarngpa
+import org.apache.hadoop.hbase.TableName
+import org.apache.hadoop.hbase.HBaseConfiguration
+import org.apache.hadoop.hbase.client.ConnectionFactory
+import org.apache.hadoop.hbase.client.Put
+import org.apache.hadoop.hbase.util.Bytes
 import org.apache.spark._
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions._
@@ -128,7 +133,14 @@ object BatchViews {
     spark.sql(s"""
       |create 
       |  table huarngpa_view_twitter_sentiment 
-      |    as select * from huarngpa_tmp_view_twitter_sentiment
+      |    as 
+      |      select 
+      |        tweet_id as tweet_id,
+      |        avg(sentiment) as sentiment
+      |      from 
+      |        huarngpa_tmp_view_twitter_sentiment
+      |      group by
+      |        tweet_id
       """.stripMargin
       );
 
@@ -136,14 +148,90 @@ object BatchViews {
   }
   
   /*
-   * Describe
+   * Since we may have many stock events getting ingested by
+   * the data lake, we need to normalize the data prior to
+   * consuming it
    */
-  def batchViewsStockNormalized(): Unit = {}
+  def batchViewsStockNormalized(): Unit = {
+    print("Starting stock normalization batch view... ")
+    val stockNormalized = spark.sql(s"""
+      |select 
+      |  B.ticker as ticker,
+      |  B.trading_day as trading_day,
+      |  B.received as received,
+      |  A.col2 as day_open,
+      |  A.col3 as day_high,
+      |  A.col4 as day_low,
+      |  A.col5 as day_close,
+      |  A.col6 as day_volume
+      |from 
+      |  huarngpa_master_stock A
+      |inner join
+      |  (select
+      |    col0 as ticker,
+      |    col1 as trading_day,
+      |    max(col7) as received
+      |  from 
+      |    huarngpa_master_stock
+      |  group by
+      |    col0,
+      |    col1) B
+      |on
+      |  B.ticker = A.col0 and
+      |  B.trading_day = A.col1 and
+      |  B.received = A.col7
+      """.stripMargin
+    );
+    stockNormalized
+      .registerTempTable("huarngpa_tmp_view_stock_normalized");
+    stockNormalized.write
+      .mode(SaveMode.Overwrite)
+      .format("hive")
+      .saveAsTable("huarngpa_view_stock_normalized");
+    print("Completed.\n");
+  }
   
   /*
    * Describe
    */
   def batchViewsStockWeekly(): Unit = {}
+  
+  /*
+   * Describe
+   */
+  def batchViewsSentimentStockLinReg(): Unit = {
+
+    val sentiment = spark.table("huarngpa_view_twitter_sentiment");
+    val twitter = spark.table("huarngpa_view_twitter_normalized");
+    val stock = spark.table("huarngpa_view_stock_normalized");
+
+    val ts = twitter.join(
+      sentiment, twitter("tweet_id") <=> sentiment("tweet_id")
+    );
+
+    val ts2 = ts.groupBy(
+      ts("tweet_date").as("date"),
+      ts("user_id")
+    ).agg(
+      avg("sentiment").as("avg_sentiment"), 
+      sum("retweets").as("sum_retweets"), 
+      sum("favorited").as("sum_favorited")
+    );
+
+    val cols = Seq(
+      "ticker", 
+      "date", 
+      "received", 
+      "day_open", 
+      "day_high", 
+      "day_low", 
+      "day_close", 
+      "day_volume"
+    );
+
+    val stock2 = stock.toDF(cols: _*)
+
+  }
   
   def main(args: Array[String]) = {
     
@@ -152,6 +240,8 @@ object BatchViews {
       batchViewsTwitterNormalize()
       batchViewsTwitterAllTime()
       batchViewsTwitterSentiment()
+      batchViewsStockNormalized()
+      batchViewsSentimentStockLinReg()
       Thread.sleep(eightHours)
     }
 

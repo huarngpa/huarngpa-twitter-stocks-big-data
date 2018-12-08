@@ -29,6 +29,7 @@ class StockHistory:
         self.day_low = day_low
         self.day_close = day_close
         self.day_volume = day_volume
+        self.received = time.time()
 
     def __str__(self):
         d = dict()
@@ -39,6 +40,7 @@ class StockHistory:
         d['day_low'] = self.day_low
         d['day_close'] = self.day_close
         d['day_volume'] = self.day_volume
+        d['received'] = self.received
         return json.dumps(d)
 
     def __repr__(self):

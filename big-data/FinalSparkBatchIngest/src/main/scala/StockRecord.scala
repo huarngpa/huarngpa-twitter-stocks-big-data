@@ -9,5 +9,6 @@ case class StockRecord(
   day_high: Double, 
   day_low: Double, 
   day_close: Double, 
-  day_volume: Long
+  day_volume: Long,
+  received: Double
 )

@@ -139,7 +139,8 @@ object BatchIngest {
         x.day_high,       // col3
         x.day_low,        // col4
         x.day_close,      // col5
-        x.day_volume      // col6
+        x.day_volume,     // col6
+        x.received        // col7
       )
     );
 
@@ -150,7 +151,8 @@ object BatchIngest {
       StructField("col3", DoubleType, true),
       StructField("col4", DoubleType, true),
       StructField("col5", DoubleType, true),
-      StructField("col6", LongType, true)
+      StructField("col6", LongType, true),
+      StructField("col7", DoubleType, true)
     );
 
     serializedRows.foreachRDD(rdd => {

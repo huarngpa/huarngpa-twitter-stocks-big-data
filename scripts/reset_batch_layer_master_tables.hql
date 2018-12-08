@@ -18,5 +18,6 @@ create table huarngpa_master_stock(
   col3 double,
   col4 double,
   col5 double,
-  col6 bigint
+  col6 bigint,
+  col7 double
 ) stored as orc;
