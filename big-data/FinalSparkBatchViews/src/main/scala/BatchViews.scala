@@ -19,6 +19,7 @@ import edu.uchicago.huarngpa.Sentiment.Sentiment
  */
 object BatchViews {
   
+  val hbaseConf: Configuration = HBaseConfiguration.create()
   val spark = SparkSession.builder()
                           .appName("SparkBatchViews")
                           .enableHiveSupport()
@@ -82,6 +83,25 @@ object BatchViews {
       .mode(SaveMode.Overwrite)
       .format("hive")
       .saveAsTable("huarngpa_view_twitter_alltime");
+  
+    val hbaseConnection = ConnectionFactory.createConnection(hbaseConf)
+    val table = hbaseConnection.getTable(TableName.valueOf("huarngpa_batch_twitter"))
+    
+    val batchStats = twitterAllTime.map(u => {
+      val put = new Put(Bytes.toBytes(u.getAs[String]("user_id")))
+      put.addColumn(Bytes.toBytes("all"), Bytes.toBytes("min_date"), 
+                    Bytes.toBytes(u.getAs[String]("min_date")))
+      put.addColumn(Bytes.toBytes("all"), Bytes.toBytes("max_date"), 
+                    Bytes.toBytes(u.getAs[String]("max_date")))
+      put.addColumn(Bytes.toBytes("all"), Bytes.toBytes("count_tweets"), 
+                    Bytes.toBytes(u.getAs[Long]("count_tweets")))
+      put.addColumn(Bytes.toBytes("all"), Bytes.toBytes("sum_retweets"), 
+                    Bytes.toBytes(u.getAs[Long]("sum_retweets")))
+      put.addColumn(Bytes.toBytes("all"), Bytes.toBytes("sum_favorited"), 
+                    Bytes.toBytes(u.getAs[Long]("sum_favorited")))
+      table.put(put)
+    })
+    batchStats.print()
 
     print("Completed.\n");
   }
@@ -339,6 +359,17 @@ object BatchViews {
   }
   
   def main(args: Array[String]) = {
+    
+    if (args.length < 1) {
+      System.err.println(s"""
+        |Usage: spark-submit ... "<host1,host2,host3>"
+        |  <host1,...,hostn> for zookeeper quorum.
+        """.stripMargin);
+      System.exit(1);
+    }
+  
+    hbaseConf.set("hbase.zookeeper.property.clientPort", "2181")
+    hbaseConf.set("hbase.zookeeper.quorum", args(0))
     
     while (true) {
       // run the batch layer pipeline
