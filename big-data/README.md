@@ -65,7 +65,7 @@ Then go to the web application node and run the program in the `speed-layer` fol
 Finally, we have all the necessary systems up, we can run the batch processing subsytem by going back the master node of the big data cluster and using the project in the `FinalSparkBatchViews` folder. Compile the project with `mvn install` and bring up the program by running:
 ```
 # For your local machine:
-spark-submit --master local[2] --class edu.uchicago.huarngpa.BatchViews uber-FinalSparkBatchViews-0.0.1-SNAPSHOT.jar localhost:2181
+spark-submit --master local[2] --class edu.uchicago.huarngpa.BatchViews uber-FinalSparkBatchViews-0.0.1-SNAPSHOT.jar 0.0.0.0
 
 # For the cluster:
 

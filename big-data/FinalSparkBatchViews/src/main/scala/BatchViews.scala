@@ -1,7 +1,9 @@
 package edu.uchicago.huarngpa
+import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hbase.TableName
 import org.apache.hadoop.hbase.HBaseConfiguration
 import org.apache.hadoop.hbase.client.ConnectionFactory
+import org.apache.hadoop.hbase.client.HTable
 import org.apache.hadoop.hbase.client.Put
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.spark._
@@ -84,24 +86,27 @@ object BatchViews {
       .format("hive")
       .saveAsTable("huarngpa_view_twitter_alltime");
   
-    val hbaseConnection = ConnectionFactory.createConnection(hbaseConf)
-    val table = hbaseConnection.getTable(TableName.valueOf("huarngpa_batch_twitter"))
-    
-    val batchStats = twitterAllTime.map(u => {
-      val put = new Put(Bytes.toBytes(u.getAs[String]("user_id")))
-      put.addColumn(Bytes.toBytes("all"), Bytes.toBytes("min_date"), 
-                    Bytes.toBytes(u.getAs[String]("min_date")))
-      put.addColumn(Bytes.toBytes("all"), Bytes.toBytes("max_date"), 
-                    Bytes.toBytes(u.getAs[String]("max_date")))
-      put.addColumn(Bytes.toBytes("all"), Bytes.toBytes("count_tweets"), 
-                    Bytes.toBytes(u.getAs[Long]("count_tweets")))
-      put.addColumn(Bytes.toBytes("all"), Bytes.toBytes("sum_retweets"), 
-                    Bytes.toBytes(u.getAs[Long]("sum_retweets")))
-      put.addColumn(Bytes.toBytes("all"), Bytes.toBytes("sum_favorited"), 
-                    Bytes.toBytes(u.getAs[Long]("sum_favorited")))
-      table.put(put)
-    })
-    batchStats.print()
+    twitterAllTime.foreachPartition { iter =>
+      val hbaseConnection = ConnectionFactory.createConnection(hbaseConf)
+      val table = hbaseConnection.getTable(TableName.valueOf("huarngpa_batch_twitter"))
+
+      iter.foreach { r => 
+        val put = new Put(Bytes.toBytes(r.getAs[String]("user_id")))
+        put.addColumn(Bytes.toBytes("all"), Bytes.toBytes("min_date"), 
+                      Bytes.toBytes(r.getAs[java.sql.Date]("min_date").toString()))
+        put.addColumn(Bytes.toBytes("all"), Bytes.toBytes("max_date"), 
+                      Bytes.toBytes(r.getAs[java.sql.Date]("max_date").toString()))
+        put.addColumn(Bytes.toBytes("all"), Bytes.toBytes("count_tweets"), 
+                      Bytes.toBytes(r.getAs[Long]("count_tweets")))
+        put.addColumn(Bytes.toBytes("all"), Bytes.toBytes("sum_retweets"), 
+                      Bytes.toBytes(r.getAs[Long]("sum_retweets")))
+        put.addColumn(Bytes.toBytes("all"), Bytes.toBytes("sum_favorited"), 
+                      Bytes.toBytes(r.getAs[Long]("sum_favorited")))
+        table.put(put)
+      }
+      
+      hbaseConnection.close()
+    }
 
     print("Completed.\n");
   }
@@ -141,6 +146,28 @@ object BatchViews {
       .mode(SaveMode.Overwrite)
       .format("hive")
       .saveAsTable("huarngpa_view_twitter_weekly");
+
+    twitterWeekly.foreachPartition { iter =>
+      val hbaseConnection = ConnectionFactory.createConnection(hbaseConf)
+      val table = hbaseConnection.getTable(TableName.valueOf("huarngpa_batch_twitter"))
+
+      iter.foreach { r => 
+        val put = new Put(Bytes.toBytes(r.getAs[String]("user_id")))
+        put.addColumn(Bytes.toBytes("weekly"), Bytes.toBytes("min_date"), 
+                      Bytes.toBytes(r.getAs[java.sql.Date]("min_date").toString()))
+        put.addColumn(Bytes.toBytes("weekly"), Bytes.toBytes("max_date"), 
+                      Bytes.toBytes(r.getAs[java.sql.Date]("max_date").toString()))
+        put.addColumn(Bytes.toBytes("weekly"), Bytes.toBytes("count_tweets"), 
+                      Bytes.toBytes(r.getAs[Long]("count_tweets")))
+        put.addColumn(Bytes.toBytes("weekly"), Bytes.toBytes("sum_retweets"), 
+                      Bytes.toBytes(r.getAs[Long]("sum_retweets")))
+        put.addColumn(Bytes.toBytes("weekly"), Bytes.toBytes("sum_favorited"), 
+                      Bytes.toBytes(r.getAs[Long]("sum_favorited")))
+        table.put(put)
+      }
+      
+      hbaseConnection.close()
+    }
 
     print("Completed.\n");
   }
@@ -278,6 +305,32 @@ object BatchViews {
       .format("hive")
       .saveAsTable("huarngpa_view_stock_alltime");
 
+    stockAllTime.foreachPartition { iter =>
+      val hbaseConnection = ConnectionFactory.createConnection(hbaseConf)
+      val table = hbaseConnection.getTable(TableName.valueOf("huarngpa_batch_stock"))
+
+      iter.foreach { r => 
+        val put = new Put(Bytes.toBytes(r.getAs[String]("ticker")))
+        put.addColumn(Bytes.toBytes("all"), Bytes.toBytes("count_trading_days"), 
+                      Bytes.toBytes(r.getAs[Long]("count_trading_days")))
+        put.addColumn(Bytes.toBytes("all"), Bytes.toBytes("sum_day_open"), 
+                      Bytes.toBytes(r.getAs[Double]("sum_day_open")))
+        put.addColumn(Bytes.toBytes("all"), Bytes.toBytes("max_day_high"), 
+                      Bytes.toBytes(r.getAs[Double]("max_day_high")))
+        put.addColumn(Bytes.toBytes("all"), Bytes.toBytes("min_day_low"), 
+                      Bytes.toBytes(r.getAs[Double]("min_day_low")))
+        put.addColumn(Bytes.toBytes("all"), Bytes.toBytes("sum_day_close"), 
+                      Bytes.toBytes(r.getAs[Double]("sum_day_close")))
+        put.addColumn(Bytes.toBytes("all"), Bytes.toBytes("sum_day_change"), 
+                      Bytes.toBytes(r.getAs[Double]("sum_day_change")))
+        put.addColumn(Bytes.toBytes("all"), Bytes.toBytes("sum_day_volume"), 
+                      Bytes.toBytes(r.getAs[Long]("sum_day_volume")))
+        table.put(put)
+      }
+      
+      hbaseConnection.close()
+    }
+
     print("Completed.\n");
   }
   
@@ -317,6 +370,32 @@ object BatchViews {
       .mode(SaveMode.Overwrite)
       .format("hive")
       .saveAsTable("huarngpa_view_stock_weekly");
+
+    stockWeekly.foreachPartition { iter =>
+      val hbaseConnection = ConnectionFactory.createConnection(hbaseConf)
+      val table = hbaseConnection.getTable(TableName.valueOf("huarngpa_batch_stock"))
+
+      iter.foreach { r => 
+        val put = new Put(Bytes.toBytes(r.getAs[String]("ticker")))
+        put.addColumn(Bytes.toBytes("weekly"), Bytes.toBytes("count_trading_days"), 
+                      Bytes.toBytes(r.getAs[Long]("count_trading_days")))
+        put.addColumn(Bytes.toBytes("weekly"), Bytes.toBytes("sum_day_open"), 
+                      Bytes.toBytes(r.getAs[Double]("sum_day_open")))
+        put.addColumn(Bytes.toBytes("weekly"), Bytes.toBytes("max_day_high"), 
+                      Bytes.toBytes(r.getAs[Double]("max_day_high")))
+        put.addColumn(Bytes.toBytes("weekly"), Bytes.toBytes("min_day_low"), 
+                      Bytes.toBytes(r.getAs[Double]("min_day_low")))
+        put.addColumn(Bytes.toBytes("weekly"), Bytes.toBytes("sum_day_close"), 
+                      Bytes.toBytes(r.getAs[Double]("sum_day_close")))
+        put.addColumn(Bytes.toBytes("weekly"), Bytes.toBytes("sum_day_change"), 
+                      Bytes.toBytes(r.getAs[Double]("sum_day_change")))
+        put.addColumn(Bytes.toBytes("weekly"), Bytes.toBytes("sum_day_volume"), 
+                      Bytes.toBytes(r.getAs[Long]("sum_day_volume")))
+        table.put(put)
+      }
+      
+      hbaseConnection.close()
+    }
 
     print("Completed.\n");
   }
