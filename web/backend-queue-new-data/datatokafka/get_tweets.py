@@ -70,7 +70,8 @@ class TwitterAPI:
         self.auth = tweepy.OAuthHandler(self.api_key, self.api_secret)
         self.auth.set_access_token(self.token, self.token_secret)
         self.api = tweepy.API(self.auth)
-        kafka_host = os.environ.get('API_KAFKA_HOST')
+        kafka_host = os.environ.get('API_KAFKA_HOST') + ':' +\
+                     os.environ.get('API_KAFKA_PORT')
         self.kafka_producer = KafkaProducer(bootstrap_servers=kafka_host)
 
     def set_kafka_topic(self, topic=None):

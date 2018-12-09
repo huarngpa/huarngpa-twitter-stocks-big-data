@@ -59,8 +59,7 @@ object BatchViews {
 
   /*
    * Creates basic descriptive statistics around the twitter data
-   * to be used later by the applicaiton layer to coordinate the 
-   * batch and speed layers.
+   * for debugging the application in Hive
    */
   def batchViewsTwitterAllTime(): Unit = {
     print("Starting twitter all time batch view... ")
@@ -83,6 +82,45 @@ object BatchViews {
       .mode(SaveMode.Overwrite)
       .format("hive")
       .saveAsTable("huarngpa_view_twitter_alltime");
+
+    print("Completed.\n");
+  }
+  
+  /*
+   * Creates basic descriptive statistics around the twitter data
+   * to be used later by the application layer to coordinate the 
+   * batch and speed layers.
+   *
+   * Note that today's data is not compiled as part of the batch
+   * view. To be coordinated with the speed layer.
+   */
+  def batchViewsTwitterWeekly(): Unit = {
+    print("Starting twitter weekly batch view... ")
+    val twitterWeekly = spark.sql(s"""
+      |select 
+      |  user_id as user_id,
+      |  min(tweet_date) as min_date,
+      |  max(tweet_date) as max_date,
+      |  count(tweet_id) as count_tweets,
+      |  sum(retweets) as sum_retweets,
+      |  sum(favorited) as sum_favorited
+      |from 
+      |  huarngpa_view_twitter_normalized
+      |where
+      |  tweet_date between 
+      |    cast(to_date(from_unixtime(unix_timestamp()-86400*7)) as date) and 
+      |    cast(to_date(from_unixtime(unix_timestamp()-86400)) as date)
+      |group by 
+      |  user_id
+      """.stripMargin
+    );
+
+    twitterWeekly
+      .registerTempTable("huarngpa_tmp_view_twitter_weekly");
+    twitterWeekly.write
+      .mode(SaveMode.Overwrite)
+      .format("hive")
+      .saveAsTable("huarngpa_view_twitter_weekly");
 
     print("Completed.\n");
   }
@@ -163,6 +201,7 @@ object BatchViews {
       |  A.col3 as day_high,
       |  A.col4 as day_low,
       |  A.col5 as day_close,
+      |  (A.col5-A.col2)/A.col2 as day_change,
       |  A.col6 as day_volume
       |from 
       |  huarngpa_master_stock A
@@ -192,9 +231,75 @@ object BatchViews {
   }
   
   /*
-   * Describe
+   * Creates basic descriptive statistics around the stock data
+   * for debugging the application in Hive
    */
-  def batchViewsStockWeekly(): Unit = {}
+  def batchViewsStockAllTime(): Unit = {
+    print("Starting stock all time batch view... ")
+    val stockAllTime = spark.sql(s"""
+      |select 
+      |  ticker as ticker,
+      |  count(trading_day) as count_trading_days,
+      |  sum(day_open) as sum_day_open,
+      |  max(day_high) as max_day_high,
+      |  min(day_low) as min_day_low,
+      |  sum(day_close) as sum_day_close,
+      |  sum(day_change) as sum_day_change,
+      |  sum(day_volume) as sum_day_volume
+      |from huarngpa_view_stock_normalized
+      |group by ticker
+      """.stripMargin
+    );
+
+    stockAllTime
+      .registerTempTable("huarngpa_tmp_view_stock_alltime");
+    stockAllTime.write
+      .mode(SaveMode.Overwrite)
+      .format("hive")
+      .saveAsTable("huarngpa_view_stock_alltime");
+
+    print("Completed.\n");
+  }
+  
+  /*
+   * Creates basic descriptive statistics around the stock data
+   * to be used later by the application layer to coordinate the 
+   * batch and speed layers.
+   *
+   * Note that today's data is not compiled as part of the batch
+   * view. To be coordinated with the speed layer.
+   */
+  def batchViewsStockWeekly(): Unit = {
+    print("Starting stock weekly batch view... ")
+    val stockWeekly = spark.sql(s"""
+      |select 
+      |  ticker as ticker,
+      |  count(trading_day) as count_trading_days,
+      |  sum(day_open) as sum_day_open,
+      |  max(day_high) as max_day_high,
+      |  min(day_low) as min_day_low,
+      |  sum(day_close) as sum_day_close,
+      |  sum(day_change) as sum_day_change,
+      |  sum(day_volume) as sum_day_volume
+      |from huarngpa_view_stock_normalized
+      |where
+      |  trading_day between 
+      |    cast(to_date(from_unixtime(unix_timestamp()-86400*7)) as date) and 
+      |    cast(to_date(from_unixtime(unix_timestamp()-86400)) as date)
+      |group by 
+      |  ticker
+      """.stripMargin
+    );
+
+    stockWeekly
+      .registerTempTable("huarngpa_tmp_view_stock_weekly");
+    stockWeekly.write
+      .mode(SaveMode.Overwrite)
+      .format("hive")
+      .saveAsTable("huarngpa_view_stock_weekly");
+
+    print("Completed.\n");
+  }
   
   /*
    * Describe
@@ -239,9 +344,13 @@ object BatchViews {
       // run the batch layer pipeline
       batchViewsTwitterNormalize()
       batchViewsTwitterAllTime()
-      batchViewsTwitterSentiment()
+      batchViewsTwitterWeekly()
       batchViewsStockNormalized()
-      batchViewsSentimentStockLinReg()
+      batchViewsStockAllTime()
+      batchViewsStockWeekly()
+      // data science job, compute intensive
+      //batchViewsTwitterSentiment()
+      //batchViewsSentimentStockLinReg()
       Thread.sleep(eightHours)
     }
 
