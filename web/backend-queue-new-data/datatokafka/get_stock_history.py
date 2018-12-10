@@ -1,7 +1,10 @@
 #!/usr/bin/python3
 
 import argparse
+from datatokafka.helper import (write_to_hbase_batch_stock,
+                                write_to_hbase_speed_stock)
 from datetime import datetime
+import happybase
 from iexfinance.stocks import get_historical_data
 import json
 from kafka import KafkaProducer
@@ -54,6 +57,7 @@ class StockAPI:
         self.output_fname = ''
         self.kafka_producer = None
         self.kafka_topic = ''
+        self.hbase_connection = None
         self.logging = True
         self.start = None
         self.checkpoint = None
@@ -64,6 +68,10 @@ class StockAPI:
         kafka_host = os.environ.get('API_KAFKA_HOST') + ':' +\
                      os.environ.get('API_KAFKA_PORT')
         self.kafka_producer = KafkaProducer(bootstrap_servers=kafka_host)
+        hbase_host = os.environ.get('API_HBASE_THRIFT_HOST')
+        hbase_port = os.environ.get('API_HBASE_THRIFT_PORT')
+        self.hbase_connection = happybase.Connection(hbase_host,
+                                                     int(hbase_port))
     
     def set_kafka_topic(self, topic=None):
         if topic != None:
@@ -86,6 +94,11 @@ class StockAPI:
     def _write_to_kafka(self, obj):
         self.kafka_producer.send(self.kafka_topic,
                                  str(obj).encode('utf-8'))
+    
+    def _write_to_hbase(self):
+        conn = self.hbase_connection
+        write_to_hbase_batch_stock(conn, self.ticker)
+        write_to_hbase_speed_stock(conn, self.ticker)
 
     def _iterate_cursor(self):
         now = datetime.now()
@@ -106,6 +119,7 @@ class StockAPI:
             if (time.time() - self.checkpoint) > 5:
                 print('  Processed {} trading days.'.format(self.count))
                 self.checkpoint = time.time()
+        self._write_to_hbase()
 
     def _terminate(self):
         self.end = time.time()

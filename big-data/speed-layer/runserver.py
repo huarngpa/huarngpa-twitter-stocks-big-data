@@ -9,7 +9,7 @@ import sys
 import time
 import tweepy
 
-from helper import (speed_layer_stock, speed_layer_twitter)
+from helper import *
 from joiner import Joiner
 
 
@@ -35,19 +35,7 @@ class SpeedLayer:
 
     def _bootstrap_tables(self):
         try:
-            conn = self.hbase_connection
-            conn.create_table('huarngpa_batch_twitter', 
-                              {'all': dict(), 'weekly': dict()})
-            conn.create_table('huarngpa_batch_stock',
-                              {'all': dict(), 'weekly': dict()})
-            conn.create_table('huarngpa_batch_twitter_stock',
-                              {'linreg': dict()})
-            conn.create_table('huarngpa_speed_twitter', 
-                              {'all': dict(), 'weekly': dict()})
-            conn.create_table('huarngpa_speed_stock',
-                              {'all': dict(), 'weekly': dict()})
-            conn.create_table('huarngpa_speed_twitter_stock',
-                              {'linreg': dict()})
+            create_hbase_tables(hbase_connection)
         except Exception as e:
             print(e)
 
@@ -57,6 +45,12 @@ class SpeedLayer:
     def set_sleep_time(self, seconds=3600):
         self.seconds = seconds
 
+    def _get_speed_layer_twitter(self):
+        pass
+    
+    def _get_speed_layer_stock(self):
+        pass
+
     def start_server(self):
         signal.signal(signal.SIGINT, self._signal_handler)
         self._bootstrap_self()
@@ -64,6 +58,10 @@ class SpeedLayer:
             # TODO
             #
             #
+            # scan hbase for all requests
+            # for each request:
+            #     write to the serving layer
+            #     write to the batch layer
             time.sleep(self.seconds)
         self._terminate()
 

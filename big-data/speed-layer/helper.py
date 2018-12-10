@@ -14,6 +14,21 @@ kafka_twitter_topic = 'huarngpa_ingest_batch_twitter'
 kafka_stock_topic = 'huarngpa_ingest_batch_stock'
 
 
+def create_hbase_tables(hbase_connection):
+    c = hbase_connection
+    c.create_table('huarngpa_batch_twitter', {'all': dict(), 'weekly': dict()})
+    c.create_table('huarngpa_batch_stock', {'all': dict(), 'weekly': dict()})
+    c.create_table('huarngpa_batch_twitter_stock', {'linreg': dict()})
+    c.create_table('huarngpa_speed_twitter', {'all': dict(), 'weekly': dict()})
+    c.create_table('huarngpa_speed_stock', {'all': dict(), 'weekly': dict()})
+    c.create_table('huarngpa_speed_twitter_stock', {'linreg': dict()})
+
+
+def get_twitter_keys(hbase_connection):
+    table = hbase_connection.table('huarngpa_speed_twitter')
+    
+
+
 def speed_layer_twitter(user):
     auth = tweepy.OAuthHandler(twitter_api_key, twitter_api_secret)
     auth.set_access_token(twitter_token, twitter_token_secret)

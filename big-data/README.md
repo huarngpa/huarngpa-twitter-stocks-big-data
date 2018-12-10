@@ -83,5 +83,5 @@ Finally, we have all the necessary systems up, we can run the batch processing s
 spark-submit --master local[2] --class edu.uchicago.huarngpa.BatchViews uber-FinalSparkBatchViews-0.0.1-SNAPSHOT.jar 0.0.0.0
 
 # For the cluster:
-
+spark-submit --master yarn --deploy-mode client --class edu.uchicago.huarngpa.BatchViews uber-FinalSparkBatchViews-0.0.1-SNAPSHOT.jar 10.0.0.2
 ```

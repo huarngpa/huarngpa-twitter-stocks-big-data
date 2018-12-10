@@ -33,7 +33,7 @@ object BatchIngest {
                           .getOrCreate()
   val streamingContext = new StreamingContext(spark.sparkContext, 
                                               Seconds(30));
-  streamingContext.checkpoint("/tmp/huarngpa/batch/");
+  //streamingContext.checkpoint("/tmp/huarngpa/batch/");
   val sqlContext = new SQLContext(streamingContext.sparkContext);
   import sqlContext.implicits._
 
@@ -104,11 +104,12 @@ object BatchIngest {
         "col1",
         to_date(col("col1"), "yyyy-MM-dd")
       );
-      df.registerTempTable("huarngpa_tmp_master_twitter")
+      //df.registerTempTable("huarngpa_tmp_master_twitter")
       df.write
         .mode(SaveMode.Append)
         .format("hive")
         .saveAsTable("huarngpa_master_twitter");
+      df.show()
     });
   }
   
@@ -163,11 +164,12 @@ object BatchIngest {
         "col1",
         to_date(col("col1"), "yyyy-MM-dd")
       );
-      df.registerTempTable("huarngpa_tmp_master_stock")
+      //df.registerTempTable("huarngpa_tmp_master_stock")
       df.write
         .mode(SaveMode.Append)
         .format("hive")
         .saveAsTable("huarngpa_master_stock");
+      df.show()
     });
   }
 
