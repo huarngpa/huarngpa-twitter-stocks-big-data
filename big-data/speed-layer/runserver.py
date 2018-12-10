@@ -27,8 +27,8 @@ class SpeedLayer:
 
     def _bootstrap_self(self):
         self.start = time.time()
-        self.hbase_host = os.environ.get('API_HBASE_HOST')
-        self.hbase_port = os.environ.get('API_HBASE_PORT')
+        self.hbase_host = os.environ.get('API_HBASE_THRIFT_HOST')
+        self.hbase_port = os.environ.get('API_HBASE_THRIFT_PORT')
         self.hbase_connection = happybase.Connection(self.hbase_host,
                                                      int(self.hbase_port))
         self._bootstrap_tables()

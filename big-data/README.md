@@ -49,12 +49,27 @@ Navigate to the `FinalSparkBatchIngest` folder, compile the project with `mvn in
 spark-submit --master local[2] --class edu.uchicago.huarngpa.BatchIngest uber-FinalSparkBatchIngest-0.0.1-SNAPSHOT.jar localhost:9092
 
 # For the cluster:
-
+spark-submit --master yarn --deploy-mode client --class edu.uchicago.huarngpa.BatchIngest uber-FinalSparkBatchIngest-0.0.1-SNAPSHOT.jar 10.0.0.2:6667
 ```
 
 For the speed layer we need to make sure that the hbase thrift server has been started. So at the master node of the cluster run:
 ```
 hbase thrift start
+```
+
+On the web server, deploy the application in the `speed-layer` folder by making sure the following variables have been sourced to the environment:
+```
+# For your local machine:
+export API_KAFKA_HOST="0.0.0.0"
+export API_KAFKA_PORT="9092"
+export API_HBASE_THRIFT_HOST="0.0.0.0"
+export API_HBASE_THRIFT_PORT="9090"
+
+# For the cluster:
+export API_KAFKA_HOST="10.0.0.2"
+export API_KAFKA_PORT="6667"
+export API_HBASE_THRIFT_HOST="10.0.0.2"
+export API_HBASE_THRIFT_PORT="9090"
 ```
 
 Then go to the web application node and run the program in the `speed-layer` folder:
