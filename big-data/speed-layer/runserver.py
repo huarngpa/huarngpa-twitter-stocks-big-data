@@ -35,7 +35,7 @@ class SpeedLayer:
 
     def _bootstrap_tables(self):
         try:
-            create_hbase_tables(hbase_connection)
+            create_hbase_tables(self.hbase_connection)
         except Exception as e:
             print(e)
 
@@ -46,22 +46,35 @@ class SpeedLayer:
         self.seconds = seconds
 
     def _get_speed_layer_twitter(self):
-        pass
+        keys = get_twitter_keys(self.hbase_connection)
+        for key in keys:
+            dkey = key.decode('utf-8')
+            data = speed_layer_twitter_data(dkey)
+            objects = convert_statuses_to_objects(data)
+            write_to_batch_layer_twitter(objects)
+            write_to_serving_layer_twitter(self.hbase_connection,
+                                           dkey,
+                                           objects)
+            print('{}: Speed layer handled twitter user: {}.'.format(time.time(),
+                                                                     dkey))
     
     def _get_speed_layer_stock(self):
-        pass
+        keys = get_stock_keys(self.hbase_connection)
+        for key in keys:
+            dkey = key.decode('utf-8')
+            data = speed_layer_stock_data(dkey)
+            obj = convert_to_stock_object(data)
+            write_to_batch_layer_stock(obj)
+            write_to_serving_layer_stock(self.hbase_connection, obj)
+            print('{}: Speed layer handled stock ticker: {}.'.format(time.time(),
+                                                                     dkey))
 
     def start_server(self):
         signal.signal(signal.SIGINT, self._signal_handler)
         self._bootstrap_self()
         while True:
-            # TODO
-            #
-            #
-            # scan hbase for all requests
-            # for each request:
-            #     write to the serving layer
-            #     write to the batch layer
+            self._get_speed_layer_twitter()
+            self._get_speed_layer_stock()
             time.sleep(self.seconds)
         self._terminate()
 
