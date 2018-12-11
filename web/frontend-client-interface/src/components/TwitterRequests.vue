@@ -51,7 +51,7 @@
 
 <script>
 import { mapState } from 'vuex'
-// import { EventBus } from '@/utils'
+import { EventBus } from '@/utils'
 
 export default {
   data () {
@@ -65,11 +65,23 @@ export default {
   }),
   methods: {
     requesting () {
-      this.$dispatch('requestNewTwitterUser', { twitterUser: this.twitterUser })
+      this.$store.dispatch('requestNewTwitterUser', { twitterUser: this.twitterUser })
     }
   },
   beforeMount () {
     this.$store.dispatch('loadTwitterRequests')
+  },
+  mounted () {
+    EventBus.$on('twitterRequestSucceeded', (msg) => {
+      this.errorMsg = msg
+    })
+    EventBus.$on('twitterRequestFailed', (msg) => {
+      this.errorMsg = msg
+    })
+  },
+  beforeDestroy () {
+    EventBus.$off('twitterRequestSucceeded')
+    EventBus.$off('twitterRequestFailed')
   }
 }
 </script>

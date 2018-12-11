@@ -5,3 +5,15 @@ const API_URL = 'http://localhost:11181'
 export function fetchTwitterRequests () {
   return axios.get(`${API_URL}/api/twitter/requests`, {})
 }
+
+export function fetchStockRequests () {
+  return axios.get(`${API_URL}/api/stock/requests`, {})
+}
+
+export function makeTwitterRequest (twitterUser) {
+  return axios.get(`${API_URL}/api/twitter/${twitterUser}`, {})
+}
+
+export function makeStockRequest (stockTicker) {
+  return axios.get(`${API_URL}/api/stock/${stockTicker}`, {})
+}

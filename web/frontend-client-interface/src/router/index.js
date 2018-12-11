@@ -4,6 +4,8 @@ import Home from '@/components/Home'
 import Requests from '@/components/Requests'
 import TwitterRequests from '@/components/TwitterRequests'
 import StockRequests from '@/components/StockRequests'
+import TwitterWeekly from '@/components/TwitterWeekly'
+import StockWeekly from '@/components/StockWeekly'
 
 Vue.use(Router)
 
@@ -28,6 +30,16 @@ export default new Router({
       path: '/requests/stock',
       name: 'StockRequests',
       component: StockRequests
+    },
+    {
+      path: '/twitter-weekly',
+      name: 'TwitterWeekly',
+      component: TwitterWeekly
+    },
+    {
+      path: '/stock-weekly',
+      name: 'StockWeekly',
+      component: StockWeekly
     }
   ]
 })

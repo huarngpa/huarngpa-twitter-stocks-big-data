@@ -15,7 +15,7 @@
             <p class="subtitle">Make or check data requests to the system.</p>
           </div>
           <div class="card-footer">
-            <router-link to="requests" class="card-footer-item">Create Request</router-link>
+            <router-link to="/requests" class="card-footer-item">Create Request</router-link>
           </div>
         </div>
         <br/>
@@ -25,7 +25,7 @@
             <p class="subtitle">Analyze weekly statistics in Twitter data.</p>
           </div>
           <div class="card-footer">
-            <router-link to="#" class="card-footer-item">Check Statistics</router-link>
+            <router-link to="/twitter-weekly" class="card-footer-item">Check Statistics</router-link>
           </div>
         </div>
         <br/>
@@ -35,7 +35,7 @@
             <p class="subtitle">Analyze weekly statistics in the stock market.</p>
           </div>
           <div class="card-footer">
-            <router-link to="#" class="card-footer-item">Check Statistics</router-link>
+            <router-link to="/stock-weekly" class="card-footer-item">Check Statistics</router-link>
           </div>
         </div>
       </div>
