@@ -1,19 +1,29 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
 
+import { fetchTwitterRequests } from '@/api'
+
 Vue.use(Vuex)
 
 const state = {
-  requests: []
+  twitterRequests: [],
+  stockRequests: []
 }
 
 const actions = {
-  loadRequests (context) {
+  loadTwitterRequests (context) {
+    return fetchTwitterRequests().then(response =>
+      context.commit('setTwitterRequests', { twitterRequests: response.data })
+    )
+  },
+  requestNewTwitterUser (context, data) {
+    // TODO
   }
 }
 
 const mutations = {
-  setRequests (state, payload) {
+  setTwitterRequests (state, payload) {
+    state.twitterRequests = payload.twitterRequests
   }
 }
 

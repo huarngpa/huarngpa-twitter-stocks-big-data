@@ -4,7 +4,7 @@
       <router-link to="/" class="navbar-item">
         Home
       </router-link>
-      <router-link to="#" class="navbar-item">
+      <router-link to="/requests" class="navbar-item">
         Create Request
       </router-link>
     </div>
