@@ -1,6 +1,6 @@
 package edu.uchicago.huarngpa
 import org.apache.kafka.clients.consumer.ConsumerRecord
-import org.apache.kafka.common.serialization.StringDeserializer
+import kafka.serializer.StringDecoder
 import org.apache.spark._
 import org.apache.spark.SparkConf
 import org.apache.spark.SparkContext._
@@ -10,9 +10,7 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.hive._
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.streaming._
-import org.apache.spark.streaming.kafka010._
-import org.apache.spark.streaming.kafka010.ConsumerStrategies.Subscribe
-import org.apache.spark.streaming.kafka010.LocationStrategies.PreferConsistent
+import org.apache.spark.streaming.kafka._
 import org.apache.spark.streaming.StreamingContext
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
@@ -33,25 +31,17 @@ object BatchIngest {
                           .getOrCreate()
   val streamingContext = new StreamingContext(spark.sparkContext, 
                                               Seconds(30));
-  //streamingContext.checkpoint("/tmp/huarngpa/batch/");
+  streamingContext.checkpoint("/tmp/huarngpa/batch/");
   val sqlContext = new SQLContext(streamingContext.sparkContext);
   import sqlContext.implicits._
 
-  var kafkaParams = Map[String, Object]();
+  var kafkaParams = Map[String, String]();
 
   /**
    * Bootstraps the kafka params for the batch layer.
    */
   def bootstrapKafkaParams(server: String): Unit = {
-    kafkaParams = Map[String, Object](
-      "bootstrap.servers" -> server,
-      "key.deserializer" -> classOf[StringDeserializer],
-      "value.deserializer" -> classOf[StringDeserializer],
-      "group.id" -> "use_a_separate_group_id_for_each_stream",
-      "auto.offset.reset" -> "latest",
-      "enable.auto.commit" -> (false: java.lang.Boolean),
-      "security.protocol" -> "PLAINTEXT"
-    );
+    kafkaParams = Map[String, String]("metadata.broker.list" -> server)
   }
 
   /**
@@ -61,15 +51,16 @@ object BatchIngest {
    */
   def batchLayerIngestKafkaTwitter(): Unit = {
 
-    val stream = KafkaUtils.createDirectStream[String, String](
-      streamingContext, 
-      PreferConsistent,
-      Subscribe[String, String](
-        Array("huarngpa_ingest_batch_twitter"), 
-        kafkaParams)
+    val stream = KafkaUtils.createDirectStream[String, 
+                                               String, 
+                                               StringDecoder,
+                                               StringDecoder](
+      streamingContext,
+      kafkaParams,
+      Set("huarngpa_ingest_batch_twitter")
     );
 
-    val records = stream.map(_.value);
+    val records = stream.map(_._2);
 
     val serializedRecords = records.map(
       record => mapper.readValue(record, classOf[TwitterRecord])
@@ -105,7 +96,7 @@ object BatchIngest {
         "col1",
         to_date(col("col1"), "yyyy-MM-dd")
       );
-      //df.registerTempTable("huarngpa_tmp_master_twitter")
+      df.registerTempTable("huarngpa_tmp_master_twitter")
       df.write
         .mode(SaveMode.Append)
         .format("hive")
@@ -119,15 +110,16 @@ object BatchIngest {
    */
   def batchLayerIngestKafkaStock(): Unit = {
 
-    val stream = KafkaUtils.createDirectStream[String, String](
-      streamingContext, 
-      PreferConsistent,
-      Subscribe[String, String](
-        Array("huarngpa_ingest_batch_stock"), 
-        kafkaParams)
+    val stream = KafkaUtils.createDirectStream[String, 
+                                               String, 
+                                               StringDecoder,
+                                               StringDecoder](
+      streamingContext,
+      kafkaParams,
+      Set("huarngpa_ingest_batch_stock")
     );
 
-    val records = stream.map(_.value);
+    val records = stream.map(_._2);
 
     val serializedRecords = records.map(
       record => mapper.readValue(record, classOf[StockRecord])
@@ -165,7 +157,7 @@ object BatchIngest {
         "col1",
         to_date(col("col1"), "yyyy-MM-dd")
       );
-      //df.registerTempTable("huarngpa_tmp_master_stock")
+      df.registerTempTable("huarngpa_tmp_master_stock")
       df.write
         .mode(SaveMode.Append)
         .format("hive")

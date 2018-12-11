@@ -134,3 +134,15 @@ def write_to_hbase_speed_twitter(hbase_connection, user_id):
         b'weekly:sum_retweets': b'computing',
         b'weekly:sum_favorited': b'computing',
     })
+
+
+def get_batch_weekly_twitter(hbase_connection):
+    conn = hbase_connection
+    table = conn.table('huarngpa_batch_twitter')
+    for key, data in table.scan():
+        ##key.decode
+        print(key, data)
+        print(type(key), type(data))
+
+def get_speed_weekly_twitter(hbase_connection):
+    conn = hbase_connection
