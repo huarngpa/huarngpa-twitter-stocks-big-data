@@ -136,13 +136,136 @@ def write_to_hbase_speed_twitter(hbase_connection, user_id):
     })
 
 
-def get_batch_weekly_twitter(hbase_connection):
+def get_serving_layer_data(hbase_connection, topic):
     conn = hbase_connection
-    table = conn.table('huarngpa_batch_twitter')
+    table = conn.table(topic)
+    result = dict()
     for key, data in table.scan():
-        ##key.decode
-        print(key, data)
-        print(type(key), type(data))
+        dkey = key.decode(encoding='UTF-8')
+        result[dkey] = dict()
+        for k, v in data.items():
+            try:
+                dk = k.decode(encoding='UTF-8')
+                dv = v.decode(encoding='UTF-8')
+                result[dkey][dk] = dv
+            except Exception as e:
+                # fails silently
+                # print(e, k, v)
+                pass
+    return result
 
-def get_speed_weekly_twitter(hbase_connection):
-    conn = hbase_connection
+
+def merge_serving_layer_data(left, right):
+    lkeys = left.keys()
+    rkeys = right.keys()
+    mset = set(list(lkeys) + list(rkeys))
+    merged = dict()
+    for key in mset:
+        merged[key] = dict()
+        left_data = left[key] if left.get(key) != None else dict()
+        right_data = right[key] if right.get(key) != None else dict()
+        iter_dict = left_data if len(left_data.keys()) > 0 else right_data
+        for k, v in iter_dict.items():
+            if k[-4:] == 'date':
+                continue
+            val = 0
+            try:
+                val += float(left_data[k]) if left_data.get(k) != None else 0
+            except ValueError:
+                pass
+            try:
+                val += float(right_data[k]) if right_data.get(k) != None else 0
+            except ValueError:
+                pass
+            merged[key][k] = val
+    return merged
+
+
+def ensure_key_exists(d, k):
+    d[k] = "N/A" if d.get(k) == None else d[k]
+
+
+def try_divide_by(r, k, n, d):
+    try:
+        r[k] = round(float(r[n]) / float(r[d]), 3)
+    except Exception as e:
+        pass
+
+
+def format_two_precision(d, k):
+    try:
+        d[k] = "{0:.2f}".format(d[k])
+    except Exception as e:
+        pass
+
+
+def format_three_precision(d, k):
+    try:
+        d[k] = "{0:.3f}".format(d[k])
+    except Exception as e:
+        pass
+
+
+def format_with_commas(d, k):
+    try:
+        d[k] = "{0:,}".format(int(d[k]))
+    except Exception as e:
+        pass
+
+
+def patch_and_format_twitter_data(merged):
+    data = []
+    api = bootstrap_tweepy()
+    for k, v in merged.items():
+        user = api.get_user(id=k)
+        v['user_id'] = k
+        v['username'] = user.screen_name
+        ensure_key_exists(v, 'weekly:count_tweets')
+        ensure_key_exists(v, 'weekly:sum_favorited')
+        ensure_key_exists(v, 'weekly:sum_retweets')
+        ensure_key_exists(v, 'weekly:sum_sentiment')
+        ensure_key_exists(v, 'weekly:sentiment')
+        try_divide_by(v, 'weekly:sentiment', 
+                      'weekly:sum_sentiment', 'weekly:count_tweets')
+        format_with_commas(v, 'weekly:count_tweets')
+        format_with_commas(v, 'weekly:sum_favorited')
+        format_with_commas(v, 'weekly:sum_retweets')
+        format_with_commas(v, 'weekly:sum_sentiment')
+        format_three_precision(v, 'weekly:sentiment')
+        data.append(v)
+    return data
+
+
+def patch_and_format_stock_data(merged):
+    data = []
+    for k, v in merged.items():
+        v['ticker'] = k
+        ensure_key_exists(v, 'weekly:count_trading_days')
+        ensure_key_exists(v, 'weekly:max_day_high')
+        ensure_key_exists(v, 'weekly:min_day_low')
+        ensure_key_exists(v, 'weekly:sum_day_change')
+        ensure_key_exists(v, 'weekly:sum_day_close')
+        ensure_key_exists(v, 'weekly:sum_day_open')
+        ensure_key_exists(v, 'weekly:sum_day_volume')
+        ensure_key_exists(v, 'weekly:avg_day_change')
+        ensure_key_exists(v, 'weekly:avg_day_open')
+        ensure_key_exists(v, 'weekly:avg_day_close')
+        ensure_key_exists(v, 'weekly:avg_day_volume')
+        try_divide_by(v, 'weekly:avg_day_change', 
+                      'weekly:sum_day_change', 
+                      'weekly:count_trading_days')
+        try_divide_by(v, 'weekly:avg_day_open', 
+                      'weekly:sum_day_open', 
+                      'weekly:count_trading_days')
+        try_divide_by(v, 'weekly:avg_day_close', 
+                      'weekly:sum_day_close', 
+                      'weekly:count_trading_days')
+        try_divide_by(v, 'weekly:avg_day_volume', 
+                      'weekly:sum_day_volume', 
+                      'weekly:count_trading_days')
+        format_three_precision(v, 'weekly:avg_day_change')
+        format_two_precision(v, 'weekly:avg_day_open')
+        format_two_precision(v, 'weekly:avg_day_close')
+        format_with_commas(v, 'weekly:avg_day_volume')
+        data.append(v)
+    return data

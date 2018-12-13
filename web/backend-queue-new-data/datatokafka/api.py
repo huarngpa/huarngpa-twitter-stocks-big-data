@@ -6,8 +6,10 @@ import os
 
 from datatokafka.get_stock_history import StockAPI
 from datatokafka.get_tweets import TwitterAPI
-from datatokafka.helper import (get_batch_weekly_twitter,
-                                get_speed_weekly_twitter,
+from datatokafka.helper import (get_serving_layer_data,
+                                merge_serving_layer_data,
+                                patch_and_format_stock_data,
+                                patch_and_format_twitter_data,
                                 start_retrieval_process,
                                 write_stock_history_request,
                                 write_twitter_user_request)
@@ -72,13 +74,17 @@ def twitter_api_requests():
 
 @api.route('/stock/weekly', methods=('GET',))
 def stock_api_weekly():
-    data = {'message': 'under construction'}
+    batch = get_serving_layer_data(hbase_connection, 'huarngpa_batch_stock')
+    speed = get_serving_layer_data(hbase_connection, 'huarngpa_speed_stock')
+    merged = merge_serving_layer_data(batch, speed)
+    data = patch_and_format_stock_data(merged)
     return jsonify(data), 200
 
 
 @api.route('/twitter/weekly', methods=('GET',))
 def twitter_api_weekly():
-    batch = get_batch_weekly_twitter(hbase_connection)
-    speed = get_speed_weekly_twitter(hbase_connection)
-    data = {'message': 'under construction'}
+    batch = get_serving_layer_data(hbase_connection, 'huarngpa_batch_twitter')
+    speed = get_serving_layer_data(hbase_connection, 'huarngpa_speed_twitter')
+    merged = merge_serving_layer_data(batch, speed)
+    data = patch_and_format_twitter_data(merged)
     return jsonify(data), 200

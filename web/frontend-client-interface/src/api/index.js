@@ -17,3 +17,11 @@ export function makeTwitterRequest (twitterUser) {
 export function makeStockRequest (stockTicker) {
   return axios.get(`${API_URL}/api/stock/${stockTicker}`, {})
 }
+
+export function fetchTwitterWeekly () {
+  return axios.get(`${API_URL}/api/twitter/weekly`, {})
+}
+
+export function fetchStockWeekly () {
+  return axios.get(`${API_URL}/api/stock/weekly`, {})
+}

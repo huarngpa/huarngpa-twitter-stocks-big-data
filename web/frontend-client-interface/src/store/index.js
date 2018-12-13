@@ -2,6 +2,7 @@ import Vue from 'vue'
 import Vuex from 'vuex'
 
 import { fetchTwitterRequests, fetchStockRequests,
+  fetchTwitterWeekly, fetchStockWeekly,
   makeTwitterRequest, makeStockRequest } from '@/api'
 import { EventBus } from '@/utils'
 
@@ -9,7 +10,9 @@ Vue.use(Vuex)
 
 const state = {
   twitterRequests: [],
-  stockRequests: []
+  stockRequests: [],
+  twitterWeekly: [],
+  stockWeekly: []
 }
 
 const actions = {
@@ -28,6 +31,14 @@ const actions = {
       EventBus.$emit('twitterRequestFailed', error.response.data.message)
     })
   },
+  loadTwitterWeekly (context) {
+    return fetchTwitterWeekly().then(response => {
+      console.log(response.data)
+      context.commit('setTwitterWeekly', {
+        twitterWeekly: response.data
+      })
+    })
+  },
   loadStockRequests (context) {
     return fetchStockRequests().then(response =>
       context.commit('setStockRequests', {
@@ -42,6 +53,14 @@ const actions = {
     }).catch(error => {
       EventBus.$emit('stockRequestFailed', error.response.data.message)
     })
+  },
+  loadStockWeekly (context) {
+    return fetchStockWeekly().then(response => {
+      console.log(response.data)
+      context.commit('setStockWeekly', {
+        stockWeekly: response.data
+      })
+    })
   }
 }
 
@@ -51,6 +70,12 @@ const mutations = {
   },
   setStockRequests (state, payload) {
     state.stockRequests = payload.stockRequests
+  },
+  setTwitterWeekly (state, payload) {
+    state.twitterWeekly = payload.twitterWeekly
+  },
+  setStockWeekly (state, payload) {
+    state.stockWeekly = payload.stockWeekly
   }
 }
 
