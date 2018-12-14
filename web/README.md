@@ -1,5 +1,5 @@
 # Web Stack Overview
-This is the web package of the final project. For this component, I decided to break my web-application into multiple components. First, there is a "frontend" application the the user will use to issue new data requests and second, there is "backend" application that will fulfill twitter and stock data requests. This backend application will also run a job which periodically fetches the lastest data from twitter and the stock markets on a daily basis.
+This is the web package of the final project. For this component, I decided to break my web-application into multiple components. First, there is a "frontend" application the the user will use to issue new data requests and interact with batch/speed layer data and second, there is "backend" application that will fulfill twitter and stock data requests. This backend application will also run a job which periodically fetches the lastest data from twitter and the stock markets on a daily basis.
 
 # Big Data Architecture Considerations
 The web architecture for this project takes advantage of a distributed architecture. That is, from a frontend application, we would like to take advantage of the client's compute by using reactive applications to reduce web request load on the system. We would also like to have horizontal scalability by being able to deploy the backend behind a load balancer and be able to scale horizontally since the REST API is stateless (when not deployed on SQLite).
@@ -27,11 +27,25 @@ I made the decision to have the backend web applications write directy to Kafka 
 # General Installation & Deployment
 Make sure to define the following variables in a `.env` or `.bashrc` file on the machines you are deploying the web applications to:
 ```
-export TWITTER_API_KEY="<key>"
-export TWITTER_API_SECRET_KEY="<secret-key>"
-export TWITTER_API_ACCESS_TOKEN="<token>"
-export TWITTER_API_ACCESS_TOKEN_SECRET="<token-secret>"
-export API_KAFKA_HOST="localhost:9092"
+# For your local machine:
+export TWITTER_API_KEY="<your key>"
+export TWITTER_API_SECRET_KEY="<your secret-key>"
+export TWITTER_API_ACCESS_TOKEN="<your token>"
+export TWITTER_API_ACCESS_TOKEN_SECRET="<your token-secret>"
+export API_KAFKA_HOST="0.0.0.0"
+export API_KAFKA_PORT="9092"
+export API_HBASE_THRIFT_HOST="0.0.0.0"
+export API_HBASE_THRIFT_PORT="9090"
+
+# For the cluster:
+export TWITTER_API_KEY="<your key>"
+export TWITTER_API_SECRET_KEY="<your secret-key>"
+export TWITTER_API_ACCESS_TOKEN="<your token>"
+export TWITTER_API_ACCESS_TOKEN_SECRET="<your token-secret>"
+export API_KAFKA_HOST="10.0.0.2"
+export API_KAFKA_PORT="6667"
+export API_HBASE_THRIFT_HOST="10.0.0.2"
+export API_HBASE_THRIFT_PORT="9090"
 ```
 
 
