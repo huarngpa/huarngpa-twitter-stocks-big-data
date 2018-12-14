@@ -7,23 +7,35 @@ create external table if not exists huarngpa_batch_twitter (
   user_id string,
   count_tweets bigint,
   sum_retweets bigint,
-  sum_favorited bigint
+  sum_favorited bigint,
+  sum_sentiment double
 ) 
 stored by 'org.apache.hadoop.hive.hbase.HBaseStorageHandler'
 with serdeproperties (
-  'hbase.columns.mapping' = ':key,weekly:count_tweets,weekly:sum_retweets,weekly:sum_favorited'
+  'hbase.columns.mapping' = ':key,weekly:count_tweets,weekly:sum_retweets,weekly:sum_favorited,weekly:sum_sentiment'
 )
 tblproperties ('hbase.table.name' = 'huarngpa_batch_twitter');
 
 insert overwrite table huarngpa_batch_twitter
 select
-  user_id,
-  count_tweets,
-  sum_retweets,
-  sum_favorited
+  C.user_id as user_id,
+  C.count_tweets as count_tweets,
+  C.sum_retweets as sum_retweets,
+  C.sum_favorited as sum_favorited,
+  C.sum_sentiment as sum_sentiment
 from
-  huarngpa_view_twitter_weekly;
- 
+  (select
+     A.user_id as user_id,
+     A.count_tweets as count_tweets,
+     A.sum_retweets as sum_retweets,
+     A.sum_favorited as sum_favorited,
+     B.sum_sentiment as sum_sentiment
+   from
+     huarngpa_view_twitter_weekly A
+   left join
+     huarngpa_view_twitter_weekly_sentiment B
+       on A.user_id = B.user_id) C
+; 
 
 -- stocks
 

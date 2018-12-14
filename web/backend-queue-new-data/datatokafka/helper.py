@@ -266,6 +266,8 @@ def patch_and_format_stock_data(merged):
         format_three_precision(v, 'weekly:avg_day_change')
         format_two_precision(v, 'weekly:avg_day_open')
         format_two_precision(v, 'weekly:avg_day_close')
+        format_two_precision(v, 'weekly:max_day_high')
+        format_two_precision(v, 'weekly:min_day_low')
         format_with_commas(v, 'weekly:avg_day_volume')
         data.append(v)
     return data

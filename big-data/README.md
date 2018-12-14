@@ -17,7 +17,7 @@ Because we might have duplication within our batch layer, I designed the batch l
 
 Probably the most useful features of big data is the ability to combine different datasets to identify trends between the two datasets. For this project I used the Stanford NLP library and implemented a sentiment analysis on the ingested twitter data. Since this is a batch view, we can change our sentiment analysis model later on and recompute the results.
 
-Then using the Spark MLLib, I run a 
+Then using the Spark MLLib, I run a linear regressor on the data and store the computed results in Hive.
 
 # Technologies Used
 * Batch Layer (Kafka, Spark, Scala):

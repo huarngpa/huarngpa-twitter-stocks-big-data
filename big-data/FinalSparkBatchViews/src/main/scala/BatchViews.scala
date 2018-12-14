@@ -165,31 +165,56 @@ object BatchViews {
     val cols = Seq("tweet_id", "sentiment");
     val df3 = df2.toDF(cols: _*)
 
-    df3.createOrReplaceTempView("huarngpa_tmp_view_twitter_sentiment");
-    spark.sql(s"""
-      drop table if exists huarngpa_view_twitter_sentiment
-      """.stripMargin)
-    spark.sql(s"""
-      |create 
-      |  table huarngpa_view_twitter_sentiment 
-      |    as 
-      |      select 
-      |        tweet_id as tweet_id,
-      |        avg(sentiment) as sentiment
-      |      from 
-      |        huarngpa_tmp_view_twitter_sentiment
-      |      group by
-      |        tweet_id
-      """.stripMargin
-      );
+    df3
+      .registerTempTable("huarngpa_tmp_view_twitter_sentiment");
+    df3.write
+      .mode(SaveMode.Overwrite)
+      .format("hive")
+      .saveAsTable("huarngpa_view_twitter_sentiment");
 
     print("Completed.\n");
   }
   
   /*
-   * Compute the 
+   * Compute the weekly sentiment on twitter
    */
-  def batchViewsTwitterSentiment(): Unit = {
+  def batchViewsWeeklyTwitterSentiment(): Unit = {
+    print("Starting weekly twitter sentiment batch view... ")
+    val weeklyTwitterSentiment = spark.sql(s"""
+      |select
+      |  C.user_id as user_id,
+      |  sum(C.sentiment) as sum_sentiment
+      |from
+      |  (select
+      |     B.user_id,
+      |     A.tweet_id as tweet_id,
+      |     A.sentiment as sentiment,
+      |     B.tweet_date as tweet_date
+      |   from 
+      |     (select
+      |        tweet_id as tweet_id,
+      |        avg(sentiment) as sentiment
+      |      from huarngpa_view_twitter_sentiment
+      |      group by tweet_id) A
+      |   inner join
+      |     huarngpa_view_twitter_normalized B
+      |       on A.tweet_id = B.tweet_id
+      |   ) C
+      |where
+      |  C.tweet_date between 
+      |    cast(to_date(from_unixtime(unix_timestamp()-86400*7)) as date) and 
+      |    cast(to_date(from_unixtime(unix_timestamp()-86400)) as date)
+      |group by
+      |  C.user_id
+      """.stripMargin
+    );
+    weeklyTwitterSentiment
+      .registerTempTable("huarngpa_tmp_view_twitter_weekly_sentiment");
+    weeklyTwitterSentiment.write
+      .mode(SaveMode.Overwrite)
+      .format("hive")
+      .saveAsTable("huarngpa_view_twitter_weekly_sentiment");
+    print("Completed.\n");
   }
   
   /*
@@ -307,56 +332,105 @@ object BatchViews {
 
     print("Completed.\n");
   }
+
+  /*
+   * Prep the data for linear regression analysis
+   */
+  def batchJoinTwitterAndStock(): Unit = {
+    
+    print("Starting stock weekly batch view... ")
+
+    val twitterUsers = spark.sql(s"""
+      |select user_id 
+      |from huarngpa_view_twitter_normalized
+      |group by user_id
+      """.stripMargin
+    )
+
+    twitterUsers.foreach(u => {
+
+      val stockTickers = spark.sql(s"""
+        |select ticker
+        |from huarngpa_view_stock_normalized
+        |group by ticker
+        """.stripMargin
+      )
+
+      stockTickers.foreach(t => {
+
+        val user = u.getString(0)
+        val ticker = t.getString(0)
+
+        val twitter = spark.sql(s"""
+          |select
+          |  C.user_id as user_id,
+          |  C.tweet_date as tweet_date,
+          |  avg(C.sentiment) as avg_sentiment
+          |from
+          |  (select
+          |     B.user_id,
+          |     A.tweet_id as tweet_id,
+          |     A.sentiment as sentiment,
+          |     B.tweet_date as tweet_date
+          |   from 
+          |     (select
+          |        tweet_id as tweet_id,
+          |        avg(sentiment) as sentiment
+          |      from huarngpa_view_twitter_sentiment
+          |      group by tweet_id) A
+          |   inner join
+          |     huarngpa_view_twitter_normalized B
+          |       on A.tweet_id = B.tweet_id
+          |   ) C
+          |group by
+          |  C.user_id,
+          |  C.tweet_date
+          """.stripMargin
+        );
+        val stocks = spark.table("huarngpa_view_stock_normalized");
+
+        val filteredTwitter = twitter.filter(twitter("user_id").equalTo(user))
+        val filteredStock = stocks.filter(stocks("ticker").equalTo(ticker))
+
+        filteredTwitter.registerTempTable("huarngpa_tmp_filtered_twitter")
+        filteredStock.registerTempTable("huarngpa_tmp_filtered_stock")
+
+        val df = spark.sql(s"""
+          |select
+          |  A.user_id as user_id,
+          |  B.ticker as ticker,
+          |  A.tweet_date as join_date,
+          |  A.avg_sentiment as sentiment,
+          |  B.day_change as day_change
+          |from 
+          |  huarngpa_tmp_filtered_twitter A
+          |inner join
+          |  huarngpa_tmp_filtered_stock B
+          |    on A.tweet_date = B.trading_day
+          """.stripMargin
+        );
+
+        df.registerTempTable("huarngpa_tmp_join_twitter_stocks");
+        df.write
+          .mode(SaveMode.Overwrite)
+          .format("hive")
+          .saveAsTable("huarngpa_join_twitter_stocks");
+        
+      })
+    })
+    
+    print("Completed.\n");
+  }
   
   /*
-   * Describe
+   * Run the linear regression analysis
    */
   def batchViewsSentimentStockLinReg(): Unit = {
 
-    val sentiment = spark.table("huarngpa_view_twitter_sentiment");
-    val twitter = spark.table("huarngpa_view_twitter_normalized");
-    val stock = spark.table("huarngpa_view_stock_normalized");
-
-    val ts = twitter.join(
-      sentiment, twitter("tweet_id") <=> sentiment("tweet_id")
-    );
-
-    val ts2 = ts.groupBy(
-      ts("tweet_date").as("date"),
-      ts("user_id")
-    ).agg(
-      avg("sentiment").as("avg_sentiment"), 
-      sum("retweets").as("sum_retweets"), 
-      sum("favorited").as("sum_favorited")
-    );
-
-    val cols = Seq(
-      "ticker", 
-      "date", 
-      "received", 
-      "day_open", 
-      "day_high", 
-      "day_low", 
-      "day_close", 
-      "day_volume"
-    );
-
-    val stock2 = stock.toDF(cols: _*)
 
   }
   
   def main(args: Array[String]) = {
-    
-    if (args.length < 1) {
-      System.err.println(s"""
-        |Usage: spark-submit ... "<host1,host2,host3>"
-        |  <host1,...,hostn> for zookeeper quorum.
-        """.stripMargin);
-      System.exit(1);
-    }
-  
-    hbaseConf.set("hbase.zookeeper.property.clientPort", "2181")
-    hbaseConf.set("hbase.zookeeper.quorum", args(0))
     
     while (true) {
       // run the batch layer pipeline
@@ -369,6 +443,7 @@ object BatchViews {
       // data science job, compute intensive
       batchViewsTwitterSentiment()
       batchViewsWeeklyTwitterSentiment()
+      //batchJoinTwitterAndStock()  // possibly broken
       //batchViewsSentimentStockLinReg()
       Thread.sleep(eightHours)
     }
