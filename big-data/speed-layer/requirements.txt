@@ -31,4 +31,4 @@ SQLAlchemy==1.2.14
 thriftpy==0.3.9
 tweepy==3.6.0
 urllib3==1.24.1
-Werkzeug==0.14.1
+Werkzeug==0.15.3
