@@ -13,7 +13,7 @@ iexfinance==0.3.5
 itsdangerous==1.1.0
 Jinja2==2.10
 kafka-python==1.4.3
-Mako==1.0.7
+Mako==1.2.2
 MarkupSafe==1.1.0
 numpy==1.15.4
 oauthlib==2.1.0
